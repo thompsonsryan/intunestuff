@@ -51,7 +51,7 @@
       }
     ]
   },
-  "description": "OpenWrt router dashboard for prometheus-node-exporter-lua with Unbound, network, system, conntrack and nftables metrics. Defaults: WAN eth1, LAN eth0.",
+  "description": "OpenWrt router dashboard for prometheus-node-exporter-lua with Unbound, network, system, conntrack and nftables metrics. Defaults: WAN eth1, LAN eth0. Interface selectors are dynamically populated from Prometheus.",
   "editable": true,
   "graphTooltip": 1,
   "id": null,
@@ -2097,43 +2097,55 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "eth1",
           "value": "eth1"
         },
         "hide": 0,
         "label": "WAN interface",
         "name": "wan_if",
-        "options": [
-          {
-            "selected": true,
-            "text": "eth1",
-            "value": "eth1"
-          }
-        ],
-        "query": "eth1",
+        "options": [],
+        "query": {
+          "query": "label_values(node_network_receive_bytes_total{job=\"openwrt\",instance=\"$instance\"}, device)",
+          "refId": "StandardVariableQuery"
+        },
         "skipUrlSync": false,
-        "type": "custom"
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(node_network_receive_bytes_total{job=\"openwrt\",instance=\"$instance\"}, device)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "description": "Select the interface used for WAN traffic. Common x86 OpenWrt values are eth1 or a PPPoE device."
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "eth0",
           "value": "eth0"
         },
         "hide": 0,
         "label": "LAN interface",
         "name": "lan_if",
-        "options": [
-          {
-            "selected": true,
-            "text": "eth0",
-            "value": "eth0"
-          }
-        ],
-        "query": "eth0",
+        "options": [],
+        "query": {
+          "query": "label_values(node_network_receive_bytes_total{job=\"openwrt\",instance=\"$instance\"}, device)",
+          "refId": "StandardVariableQuery"
+        },
         "skipUrlSync": false,
-        "type": "custom"
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(node_network_receive_bytes_total{job=\"openwrt\",instance=\"$instance\"}, device)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "description": "Select the LAN traffic interface. On OpenWrt this may be br-lan rather than the underlying physical port."
       }
     ]
   },
@@ -2168,6 +2180,6 @@
   "timezone": "browser",
   "title": "OpenWrt Router — Qotom / Unbound",
   "uid": "openwrt-qotom-unbound",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
