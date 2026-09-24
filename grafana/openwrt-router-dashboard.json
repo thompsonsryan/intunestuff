@@ -41,7 +41,7 @@
       }
     ]
   },
-  "description": "OpenWrt router dashboard for the Qotom OpenWrt router. Self-contained datasource selector works with normal Import and Dashboard JSON-model paste. Uses Prometheus job=openwrt; WAN/LAN selectors use router=qotom-openwrt.",
+  "description": "OpenWrt router dashboard for the Qotom OpenWrt router. Queries are scoped to job=openwrt and router=qotom-openwrt to avoid duplicate legacy series after Prometheus label changes. WAN/LAN interface selectors use real device labels.",
   "editable": true,
   "graphTooltip": 1,
   "id": null,
@@ -115,7 +115,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "time() - node_boot_time_seconds{job=\"openwrt\"}",
+          "expr": "time() - node_boot_time_seconds{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -189,7 +189,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"openwrt\",mode=\"idle\"}[$__rate_interval])))",
+          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"openwrt\",router=\"qotom-openwrt\",mode=\"idle\"}[$__rate_interval])))",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -263,7 +263,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"openwrt\"} / node_memory_MemTotal_bytes{job=\"openwrt\"})",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"openwrt\",router=\"qotom-openwrt\"} / node_memory_MemTotal_bytes{job=\"openwrt\",router=\"qotom-openwrt\"})",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -335,7 +335,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max(node_thermal_zone_temp{job=\"openwrt\"})",
+          "expr": "max(node_thermal_zone_temp{job=\"openwrt\",router=\"qotom-openwrt\"})",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -409,7 +409,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * node_nf_conntrack_entries{job=\"openwrt\"} / node_nf_conntrack_entries_limit{job=\"openwrt\"}",
+          "expr": "100 * node_nf_conntrack_entries{job=\"openwrt\",router=\"qotom-openwrt\"} / node_nf_conntrack_entries_limit{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -483,7 +483,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * rate(unbound_cachehits_total{job=\"openwrt\"}[5m]) / clamp_min(rate(unbound_cachehits_total{job=\"openwrt\"}[5m]) + rate(unbound_cachemiss_total{job=\"openwrt\"}[5m]), 0.000001)",
+          "expr": "100 * rate(unbound_cachehits_total{job=\"openwrt\",router=\"qotom-openwrt\"}[5m]) / clamp_min(rate(unbound_cachehits_total{job=\"openwrt\",router=\"qotom-openwrt\"}[5m]) + rate(unbound_cachemiss_total{job=\"openwrt\",router=\"qotom-openwrt\"}[5m]), 0.000001)",
           "legendFormat": "",
           "range": true,
           "refId": "A"
@@ -592,7 +592,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{job=\"openwrt\",device=\"$wan_if\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_receive_bytes_total{job=\"openwrt\",router=\"qotom-openwrt\",device=\"$wan_if\"}[$__rate_interval]) * 8",
           "legendFormat": "Download",
           "range": true,
           "refId": "A"
@@ -603,7 +603,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{job=\"openwrt\",device=\"$wan_if\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"openwrt\",router=\"qotom-openwrt\",device=\"$wan_if\"}[$__rate_interval]) * 8",
           "legendFormat": "Upload",
           "range": true,
           "refId": "B"
@@ -699,7 +699,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{job=\"openwrt\",device=\"$lan_if\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_receive_bytes_total{job=\"openwrt\",router=\"qotom-openwrt\",device=\"$lan_if\"}[$__rate_interval]) * 8",
           "legendFormat": "RX",
           "range": true,
           "refId": "A"
@@ -710,7 +710,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{job=\"openwrt\",device=\"$lan_if\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"openwrt\",router=\"qotom-openwrt\",device=\"$lan_if\"}[$__rate_interval]) * 8",
           "legendFormat": "TX",
           "range": true,
           "refId": "B"
@@ -806,7 +806,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_errs_total{job=\"openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_errs_total{job=\"openwrt\",router=\"qotom-openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
           "legendFormat": "{{device}} RX errors",
           "range": true,
           "refId": "A"
@@ -817,7 +817,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_errs_total{job=\"openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_errs_total{job=\"openwrt\",router=\"qotom-openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
           "legendFormat": "{{device}} TX errors",
           "range": true,
           "refId": "B"
@@ -828,7 +828,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_drop_total{job=\"openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_drop_total{job=\"openwrt\",router=\"qotom-openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
           "legendFormat": "{{device}} RX drops",
           "range": true,
           "refId": "C"
@@ -839,7 +839,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_drop_total{job=\"openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_drop_total{job=\"openwrt\",router=\"qotom-openwrt\",device=~\"$wan_if|$lan_if\"}[$__rate_interval])",
           "legendFormat": "{{device}} TX drops",
           "range": true,
           "refId": "D"
@@ -935,7 +935,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "node_nf_conntrack_entries{job=\"openwrt\"}",
+          "expr": "node_nf_conntrack_entries{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "Current",
           "range": true,
           "refId": "A"
@@ -946,7 +946,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "node_nf_conntrack_entries_limit{job=\"openwrt\"}",
+          "expr": "node_nf_conntrack_entries_limit{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "Limit",
           "range": true,
           "refId": "B"
@@ -1055,7 +1055,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_num_queries_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_num_queries_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Queries/s",
           "range": true,
           "refId": "A"
@@ -1151,7 +1151,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_cachehits_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_cachehits_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Hits/s",
           "range": true,
           "refId": "A"
@@ -1162,7 +1162,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_cachemiss_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_cachemiss_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Misses/s",
           "range": true,
           "refId": "B"
@@ -1173,7 +1173,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_prefetch_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_prefetch_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Prefetch/s",
           "range": true,
           "refId": "C"
@@ -1269,7 +1269,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "unbound_recursion_time_avg{job=\"openwrt\"} * 1000",
+          "expr": "unbound_recursion_time_avg{job=\"openwrt\",router=\"qotom-openwrt\"} * 1000",
           "legendFormat": "Average",
           "range": true,
           "refId": "A"
@@ -1280,7 +1280,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "unbound_recursion_time_median{job=\"openwrt\"} * 1000",
+          "expr": "unbound_recursion_time_median{job=\"openwrt\",router=\"qotom-openwrt\"} * 1000",
           "legendFormat": "Median",
           "range": true,
           "refId": "B"
@@ -1376,7 +1376,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_num_expired_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_num_expired_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Expired/stale",
           "range": true,
           "refId": "A"
@@ -1387,7 +1387,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_num_queries_discard_timeout_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_num_queries_discard_timeout_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Discard timeout",
           "range": true,
           "refId": "B"
@@ -1398,7 +1398,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_num_queries_timed_out_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_num_queries_timed_out_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "Timed out",
           "range": true,
           "refId": "C"
@@ -1409,7 +1409,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(unbound_num_dns_error_reports_total{job=\"openwrt\"}[$__rate_interval])",
+          "expr": "rate(unbound_num_dns_error_reports_total{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval])",
           "legendFormat": "DNS errors",
           "range": true,
           "refId": "D"
@@ -1505,7 +1505,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "unbound_requestlist_current_all{job=\"openwrt\"}",
+          "expr": "unbound_requestlist_current_all{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "Current",
           "range": true,
           "refId": "A"
@@ -1516,7 +1516,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "unbound_requestlist_avg{job=\"openwrt\"}",
+          "expr": "unbound_requestlist_avg{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "Average",
           "range": true,
           "refId": "B"
@@ -1527,7 +1527,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "unbound_requestlist_max{job=\"openwrt\"}",
+          "expr": "unbound_requestlist_max{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "Maximum",
           "range": true,
           "refId": "C"
@@ -1638,7 +1638,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"openwrt\",mode=\"idle\"}[$__rate_interval])))",
+          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"openwrt\",router=\"qotom-openwrt\",mode=\"idle\"}[$__rate_interval])))",
           "legendFormat": "Used",
           "range": true,
           "refId": "A"
@@ -1736,7 +1736,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"openwrt\"} / node_memory_MemTotal_bytes{job=\"openwrt\"})",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"openwrt\",router=\"qotom-openwrt\"} / node_memory_MemTotal_bytes{job=\"openwrt\",router=\"qotom-openwrt\"})",
           "legendFormat": "Used",
           "range": true,
           "refId": "A"
@@ -1832,7 +1832,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "node_thermal_zone_temp{job=\"openwrt\"}",
+          "expr": "node_thermal_zone_temp{job=\"openwrt\",router=\"qotom-openwrt\"}",
           "legendFormat": "{{type}} zone {{zone}}",
           "range": true,
           "refId": "A"
@@ -1941,7 +1941,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (name) (rate(nft_counter_packets{job=\"openwrt\"}[$__rate_interval]))",
+          "expr": "sum by (name) (rate(nft_counter_packets{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval]))",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
@@ -2037,7 +2037,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (name) (rate(nft_counter_bytes{job=\"openwrt\"}[$__rate_interval]))",
+          "expr": "sum by (name) (rate(nft_counter_bytes{job=\"openwrt\",router=\"qotom-openwrt\"}[$__rate_interval]))",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
@@ -2156,6 +2156,6 @@
   "timezone": "browser",
   "title": "OpenWrt Router — Qotom / Unbound",
   "uid": "openwrt-qotom-unbound",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }
