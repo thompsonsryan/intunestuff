@@ -1,14 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "Prometheus datasource containing OpenWrt exporter metrics",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
   "__requires": [
     {
       "type": "grafana",
@@ -51,7 +41,7 @@
       }
     ]
   },
-  "description": "OpenWrt router dashboard for the Qotom OpenWrt router. Uses Prometheus job=openwrt and router=qotom-openwrt. WAN/LAN interface selectors are populated from real device labels.",
+  "description": "OpenWrt router dashboard for the Qotom OpenWrt router. Self-contained datasource selector works with normal Import and Dashboard JSON-model paste. Uses Prometheus job=openwrt; WAN/LAN selectors use router=qotom-openwrt.",
   "editable": true,
   "graphTooltip": 1,
   "id": null,
@@ -2069,6 +2059,19 @@
   "templating": {
     "list": [
       {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus datasource",
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "current": {
           "selected": false,
           "text": "eth1",
@@ -2153,6 +2156,6 @@
   "timezone": "browser",
   "title": "OpenWrt Router — Qotom / Unbound",
   "uid": "openwrt-qotom-unbound",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }
