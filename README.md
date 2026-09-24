@@ -75,3 +75,14 @@ head -100
 The collector writes atomically to `/var/prometheus/router-extra.prom` every 15 seconds. It uses only BusyBox shell tools, `jsonfilter`, existing OpenWrt services, and the dnscrypt-proxy local metrics endpoint.
 
 Chrony NTS state is read with `chronyc -N authdata`. QoSify counters are read from `ubus call qosify get_stats`. Detailed banIP packet counts are taken from the existing nftables Prometheus collector.
+
+
+### CAKE qdisc metrics
+
+The extra collector also parses the WAN CAKE qdisc from `tc -s qdisc show dev eth1` by default. Override the interface with the `ROUTER_EXTRA_CAKE_IFACE` environment variable if needed.
+
+Exported CAKE metrics include configured bandwidth, capacity estimate, total packets/bytes/drops/overlimits/requeues, backlog, memory usage, active queues, and per-diffserv4-tin threshold/delay/backlog/packet/drop/ECN/flow statistics.
+
+The dashboard uses these metrics in the **CAKE / WAN egress** section. CAKE `overlimits` are shaping activity and are not equivalent to packet drops.
+
+For this router the default WAN interface is `eth1`.
