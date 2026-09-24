@@ -42,3 +42,36 @@ This dashboard was prepared for Grafana 13.2.x and Prometheus 3.x.
 ## Important label note
 
 Do not use a target label named `device` on the OpenWrt scrape target. The OpenWrt exporter already uses `device` for interface names such as `eth0`, `eth1`, and `br-lan`. A static `device` label causes Prometheus to preserve the exporter's original interface label as `exported_device`, which breaks the dashboard's interface queries. Use a label such as `router: qotom-openwrt` instead.
+
+
+## Advanced OpenWrt metrics
+
+The dashboard also supports QoSify, dnscrypt-proxy/X-Wing, Chrony/NTS and banIP metrics through the OpenWrt textfile collector.
+
+Install the collector on OpenWrt:
+
+```sh
+wget -O /usr/bin/router-extra-metrics \
+  https://raw.githubusercontent.com/thompsonsryan/intunestuff/main/openwrt/router-extra-metrics
+chmod +x /usr/bin/router-extra-metrics
+
+wget -O /etc/init.d/router-extra-metrics \
+  https://raw.githubusercontent.com/thompsonsryan/intunestuff/main/openwrt/router-extra-metrics.init
+chmod +x /etc/init.d/router-extra-metrics
+
+/etc/init.d/router-extra-metrics enable
+/etc/init.d/router-extra-metrics restart
+sleep 20
+```
+
+Verify:
+
+```sh
+wget -qO- http://127.0.0.1:9100/metrics | \
+grep -E '^(openwrt_qosify_|dnscrypt_proxy_|openwrt_dnscrypt_|openwrt_chrony_|openwrt_banip_)' | \
+head -100
+```
+
+The collector writes atomically to `/var/prometheus/router-extra.prom` every 15 seconds. It uses only BusyBox shell tools, `jsonfilter`, existing OpenWrt services, and the dnscrypt-proxy local metrics endpoint.
+
+Chrony NTS state is read with `chronyc -N authdata`. QoSify counters are read from `ubus call qosify get_stats`. Detailed banIP packet counts are taken from the existing nftables Prometheus collector.
