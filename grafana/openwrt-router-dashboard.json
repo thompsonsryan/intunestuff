@@ -41,7 +41,7 @@
       }
     ]
   },
-  "description": "OpenWrt Qotom router dashboard with Unbound, networking, QoSify/DSCP, dnscrypt-proxy/X-Wing PQDNSCrypt, Chrony/NTS, banIP and nftables metrics.",
+  "description": "OpenWrt Qotom router dashboard with Unbound, networking, QoSify/DSCP, dnscrypt-proxy/X-Wing PQDNSCrypt, Chrony/NTS, banIP and nftables metrics. Security counter cards are cumulative rule-hit counters; rate panel shows packets/min.",
   "editable": true,
   "graphTooltip": 1,
   "id": null,
@@ -3083,7 +3083,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "",
+      "description": "dnscrypt-proxy running average response-time gauges. This is not the startup transport RTT or a per-query latency sample.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3182,7 +3182,7 @@
           "refId": "B"
         }
       ],
-      "title": "DNSCrypt response time",
+      "title": "DNSCrypt running avg response",
       "type": "timeseries"
     },
     {
@@ -3564,8 +3564,9 @@
           "refId": "A"
         }
       ],
-      "title": "DNSCrypt avg response",
-      "type": "stat"
+      "title": "DNSCrypt running avg",
+      "type": "stat",
+      "description": "Running average DNS response time reported by dnscrypt-proxy."
     },
     {
       "collapsed": false,
@@ -4157,8 +4158,9 @@
           "refId": "A"
         }
       ],
-      "title": "BCP38 blocked",
-      "type": "stat"
+      "title": "BCP38 packets",
+      "type": "stat",
+      "description": "Cumulative nftables named-counter packets since the counter was created/reset. This is not a count of unique attacks."
     },
     {
       "datasource": {
@@ -4221,8 +4223,9 @@
           "refId": "A"
         }
       ],
-      "title": "Conntrack invalid",
-      "type": "stat"
+      "title": "Invalid conntrack packets",
+      "type": "stat",
+      "description": "Cumulative cnt_ctinvalid packets since the nftables counter was created/reset."
     },
     {
       "datasource": {
@@ -4285,8 +4288,9 @@
           "refId": "A"
         }
       ],
-      "title": "SYN flood",
-      "type": "stat"
+      "title": "SYN flood counter",
+      "type": "stat",
+      "description": "Cumulative cnt_synflood packets since the nftables counter was created/reset; not a count of unique incidents."
     },
     {
       "datasource": {
@@ -4349,8 +4353,9 @@
           "refId": "A"
         }
       ],
-      "title": "UDP flood",
-      "type": "stat"
+      "title": "UDP flood counter",
+      "type": "stat",
+      "description": "Cumulative cnt_udpflood packets since the nftables counter was created/reset; not a count of unique incidents."
     },
     {
       "datasource": {
@@ -4413,15 +4418,16 @@
           "refId": "A"
         }
       ],
-      "title": "ICMP flood",
-      "type": "stat"
+      "title": "ICMP flood counter",
+      "type": "stat",
+      "description": "Cumulative cnt_icmpflood packets since the nftables counter was created/reset; not a count of unique incidents."
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Rate of selected banIP/nftables security counters.",
+      "description": "Five-minute average rate of selected banIP/nftables named counters, shown as packets per minute. These are rule-hit counters, not unique attacks.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4468,7 +4474,7 @@
               }
             ]
           },
-          "unit": "pps"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -4503,13 +4509,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (name) (rate(nft_counter_packets{job=\"openwrt\",router=\"qotom-openwrt\",name=~\"cnt_bcp38|cnt_ctinvalid|cnt_tcpinvalid|cnt_synflood|cnt_udpflood|cnt_icmpflood\"}[$__rate_interval]))",
+          "expr": "sum by (name) (rate(nft_counter_packets{job=\"openwrt\",router=\"qotom-openwrt\",name=~\"cnt_bcp38|cnt_ctinvalid|cnt_tcpinvalid|cnt_synflood|cnt_udpflood|cnt_icmpflood\"}[5m])) * 60",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Security event rate",
+      "title": "Security counter rate (events/min)",
       "type": "timeseries"
     }
   ],
@@ -4628,6 +4634,6 @@
   "timezone": "browser",
   "title": "OpenWrt Router — Qotom / Unbound",
   "uid": "openwrt-qotom-unbound",
-  "version": 6,
+  "version": 7,
   "weekStart": ""
 }
