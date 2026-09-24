@@ -38,3 +38,7 @@ Required OpenWrt collectors for the full dashboard:
 The dashboard still imports if optional nftables counters are not present; those panels will simply be empty.
 
 This dashboard was prepared for Grafana 13.2.x and Prometheus 3.x.
+
+## Important label note
+
+Do not use a target label named `device` on the OpenWrt scrape target. The OpenWrt exporter already uses `device` for interface names such as `eth0`, `eth1`, and `br-lan`. A static `device` label causes Prometheus to preserve the exporter's original interface label as `exported_device`, which breaks the dashboard's interface queries. Use a label such as `router: qotom-openwrt` instead.
