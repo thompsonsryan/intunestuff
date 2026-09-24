@@ -1,0 +1,184 @@
+#!/bin/sh
+OUT_DIR="/var/prometheus"
+OUT_FILE="${OUT_DIR}/router-extra.prom"
+TMP_FILE="${OUT_FILE}.$$"
+DNSCRYPT_METRICS_URL="http://127.0.0.1:8082/metrics"
+DNSCRYPT_CONFIG="/etc/dnscrypt-proxy2/dnscrypt-proxy-219-direct.toml"
+INTERVAL="${ROUTER_EXTRA_INTERVAL:-15}"
+
+mkdir -p "$OUT_DIR"
+
+is_number() {
+    case "$1" in
+        ""|*[!0-9eE+.-]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+emit_value() {
+    name="$1"; type="$2"; help="$3"; value="$4"
+    is_number "$value" || return 0
+    printf '# HELP %s %s\n' "$name" "$help" >> "$TMP_FILE"
+    printf '# TYPE %s %s\n' "$name" "$type" >> "$TMP_FILE"
+    printf '%s %s\n' "$name" "$value" >> "$TMP_FILE"
+}
+
+json_value() {
+    printf '%s' "$QOSIFY_JSON" | jsonfilter -e "$1" 2>/dev/null
+}
+
+collect_once() {
+    : > "$TMP_FILE"
+
+    printf '# HELP openwrt_router_extra_collect_timestamp_seconds Unix time of the latest extra-metrics collection.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_router_extra_collect_timestamp_seconds gauge\n' >> "$TMP_FILE"
+    printf 'openwrt_router_extra_collect_timestamp_seconds %s\n' "$(date +%s)" >> "$TMP_FILE"
+
+    QOSIFY_UP=0
+    if QOSIFY_JSON="$(ubus call qosify get_stats 2>/dev/null)" && [ -n "$QOSIFY_JSON" ]; then
+        QOSIFY_UP=1
+        emit_value openwrt_qosify_ebpf_map_entries gauge "Number of entries in the QoSify eBPF map." "$(json_value '@.ebpf_map_entries')"
+        emit_value openwrt_qosify_last_reload_timestamp_seconds gauge "Unix timestamp of the last QoSify reload." "$(json_value '@.last_reload_time')"
+        emit_value openwrt_qosify_dns_cache_hits_total counter "QoSify DNS classifier cache hits." "$(json_value '@.dns_cache.hits')"
+        emit_value openwrt_qosify_dns_cache_misses_total counter "QoSify DNS classifier cache misses." "$(json_value '@.dns_cache.misses')"
+        emit_value openwrt_qosify_dns_cache_size gauge "QoSify DNS classifier cache entries." "$(json_value '@.dns_cache.size')"
+
+        printf '# HELP openwrt_qosify_class_packets_total Packets classified by QoSify class.\n' >> "$TMP_FILE"
+        printf '# TYPE openwrt_qosify_class_packets_total counter\n' >> "$TMP_FILE"
+        printf '# HELP openwrt_qosify_class_bytes_total Bytes classified by QoSify class.\n' >> "$TMP_FILE"
+        printf '# TYPE openwrt_qosify_class_bytes_total counter\n' >> "$TMP_FILE"
+        for class in besteffort bulk video voice tcp_default udp_default; do
+            packets="$(json_value "@.classes.${class}.packets")"
+            bytes="$(json_value "@.classes.${class}.bytes")"
+            is_number "$packets" && printf 'openwrt_qosify_class_packets_total{class="%s"} %s\n' "$class" "$packets" >> "$TMP_FILE"
+            is_number "$bytes" && printf 'openwrt_qosify_class_bytes_total{class="%s"} %s\n' "$class" "$bytes" >> "$TMP_FILE"
+        done
+
+        printf '# HELP openwrt_qosify_dscp_packets_total Packets classified by DSCP value.\n' >> "$TMP_FILE"
+        printf '# TYPE openwrt_qosify_dscp_packets_total counter\n' >> "$TMP_FILE"
+        printf '# HELP openwrt_qosify_dscp_bytes_total Bytes classified by DSCP value.\n' >> "$TMP_FILE"
+        printf '# TYPE openwrt_qosify_dscp_bytes_total counter\n' >> "$TMP_FILE"
+        for dscp in CS0 LE AF41 CS6; do
+            packets="$(json_value "@.dscp.${dscp}.packets")"
+            bytes="$(json_value "@.dscp.${dscp}.bytes")"
+            is_number "$packets" && printf 'openwrt_qosify_dscp_packets_total{dscp="%s"} %s\n' "$dscp" "$packets" >> "$TMP_FILE"
+            is_number "$bytes" && printf 'openwrt_qosify_dscp_bytes_total{dscp="%s"} %s\n' "$dscp" "$bytes" >> "$TMP_FILE"
+        done
+    fi
+    emit_value openwrt_qosify_up gauge "Whether QoSify statistics were collected successfully." "$QOSIFY_UP"
+
+    DNSCRYPT_UP=0
+    if DNSCRYPT_METRICS="$(wget -T 3 -qO- "$DNSCRYPT_METRICS_URL" 2>/dev/null)" && [ -n "$DNSCRYPT_METRICS" ]; then
+        DNSCRYPT_UP=1
+        printf '\n%s\n' "$DNSCRYPT_METRICS" >> "$TMP_FILE"
+    fi
+    emit_value openwrt_dnscrypt_metrics_up gauge "Whether the local dnscrypt-proxy Prometheus endpoint was reachable." "$DNSCRYPT_UP"
+
+    PQ_ENABLED=0
+    if [ -r "$DNSCRYPT_CONFIG" ] && grep -Eq '^[[:space:]]*pqdnscrypt[[:space:]]*=[[:space:]]*true([[:space:]]|$)' "$DNSCRYPT_CONFIG"; then
+        PQ_ENABLED=1
+    fi
+    emit_value openwrt_dnscrypt_pqdnscrypt_enabled gauge "Whether pqdnscrypt is enabled in the production dnscrypt-proxy configuration." "$PQ_ENABLED"
+
+    XWING_ACTIVE="$(logread 2>/dev/null | awk '
+        /dnscrypt-proxy-pq.*dnscrypt-proxy 2[.][0-9]+[.][0-9]+/ { x=0; seen=1 }
+        /dnscrypt-proxy-pq.*using the post-quantum X-Wing key exchange/ { x=1; seen=1 }
+        END { if (seen) print x+0; else print 0 }
+    ')"
+    emit_value openwrt_dnscrypt_xwing_active gauge "Whether the latest dnscrypt-proxy startup visible in logread confirmed X-Wing key exchange." "${XWING_ACTIVE:-0}"
+
+    CHRONY_UP=0
+    if TRACKING="$(chronyc -n tracking 2>/dev/null)" && [ -n "$TRACKING" ]; then
+        CHRONY_UP=1
+        stratum="$(printf '%s\n' "$TRACKING" | awk -F: '/^Stratum/{gsub(/[[:space:]]/,"",$2);print $2;exit}')"
+        last_offset="$(printf '%s\n' "$TRACKING" | awk -F: '/^Last offset/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        rms_offset="$(printf '%s\n' "$TRACKING" | awk -F: '/^RMS offset/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        frequency="$(printf '%s\n' "$TRACKING" | awk -F: '/^Frequency/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        residual="$(printf '%s\n' "$TRACKING" | awk -F: '/^Residual freq/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        skew="$(printf '%s\n' "$TRACKING" | awk -F: '/^Skew/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        root_delay="$(printf '%s\n' "$TRACKING" | awk -F: '/^Root delay/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        root_dispersion="$(printf '%s\n' "$TRACKING" | awk -F: '/^Root dispersion/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        update_interval="$(printf '%s\n' "$TRACKING" | awk -F: '/^Update interval/{gsub(/^[[:space:]]+/,"",$2);print $2+0;exit}')"
+        leap_normal=0
+        printf '%s\n' "$TRACKING" | grep -q '^Leap status[[:space:]]*: Normal' && leap_normal=1
+
+        system_time="$(printf '%s\n' "$TRACKING" | awk -F: '/^System time/{gsub(/^[[:space:]]+/,"",$2);print $2;exit}')"
+        system_value="$(printf '%s\n' "$system_time" | awk '{print $1}')"
+        case "$system_time" in
+            *slow*) system_value="-${system_value#-}" ;;
+            *fast*) system_value="${system_value#-}" ;;
+        esac
+
+        emit_value openwrt_chrony_stratum gauge "Current chrony stratum." "$stratum"
+        emit_value openwrt_chrony_system_offset_seconds gauge "Signed system offset from NTP time; negative means slow." "$system_value"
+        emit_value openwrt_chrony_last_offset_seconds gauge "Last chrony clock offset." "$last_offset"
+        emit_value openwrt_chrony_rms_offset_seconds gauge "Chrony RMS clock offset." "$rms_offset"
+        emit_value openwrt_chrony_frequency_ppm gauge "Chrony clock frequency correction in ppm." "$frequency"
+        emit_value openwrt_chrony_residual_frequency_ppm gauge "Chrony residual frequency in ppm." "$residual"
+        emit_value openwrt_chrony_skew_ppm gauge "Chrony estimated frequency error in ppm." "$skew"
+        emit_value openwrt_chrony_root_delay_seconds gauge "Chrony root delay." "$root_delay"
+        emit_value openwrt_chrony_root_dispersion_seconds gauge "Chrony root dispersion." "$root_dispersion"
+        emit_value openwrt_chrony_update_interval_seconds gauge "Chrony update interval." "$update_interval"
+        emit_value openwrt_chrony_leap_normal gauge "Whether chrony reports Leap status Normal." "$leap_normal"
+
+        selected_source="$(chronyc -n sources 2>/dev/null | awk '$1 ~ /^\^\*/ {print $2; exit}')"
+        if [ -n "$selected_source" ]; then
+            printf '# HELP openwrt_chrony_selected_source_info Currently selected chrony source.\n' >> "$TMP_FILE"
+            printf '# TYPE openwrt_chrony_selected_source_info gauge\n' >> "$TMP_FILE"
+            printf 'openwrt_chrony_selected_source_info{source="%s"} 1\n' "$selected_source" >> "$TMP_FILE"
+        fi
+
+        AUTHDATA="$(chronyc -N authdata 2>/dev/null || true)"
+        nts_count="$(printf '%s\n' "$AUTHDATA" | awk '$2=="NTS"{n++} END{print n+0}')"
+        nts_healthy="$(printf '%s\n' "$AUTHDATA" | awk '
+            $2=="NTS" {
+                n++
+                if (($4+0)>0 && ($5+0)>0 && ($7+0)<=1 && ($8+0)==0 && ($9+0)>0) ok++
+            }
+            END { if (n>0 && ok==n) print 1; else print 0 }
+        ')"
+        emit_value openwrt_chrony_nts_sources gauge "Number of chrony sources authenticated with NTS." "$nts_count"
+        emit_value openwrt_chrony_nts_all_healthy gauge "Whether all detected NTS sources have valid authentication state." "$nts_healthy"
+
+        printf '%s\n' "$AUTHDATA" | awk '
+            $2=="NTS" {
+                printf "openwrt_chrony_nts_key_id{source=\"%s\"} %s\n", $1, $3
+                printf "openwrt_chrony_nts_key_length_bits{source=\"%s\"} %s\n", $1, $5
+                printf "openwrt_chrony_nts_attempts{source=\"%s\"} %s\n", $1, $7
+                printf "openwrt_chrony_nts_nak{source=\"%s\"} %s\n", $1, $8
+                printf "openwrt_chrony_nts_cookies{source=\"%s\"} %s\n", $1, $9
+                printf "openwrt_chrony_nts_cookie_length_bytes{source=\"%s\"} %s\n", $1, $10
+            }
+        ' >> "$TMP_FILE"
+    fi
+    emit_value openwrt_chrony_up gauge "Whether chrony tracking statistics were collected successfully." "$CHRONY_UP"
+
+    BANIP_UP=0
+    BANIP_BCP38=0
+    BANIP_ELEMENTS=0
+    if BANIP_STATUS="$(/etc/init.d/banip status 2>/dev/null)" && [ -n "$BANIP_STATUS" ]; then
+        printf '%s\n' "$BANIP_STATUS" | grep -q 'status[[:space:]]*: active' && BANIP_UP=1
+        BANIP_ELEMENTS="$(printf '%s\n' "$BANIP_STATUS" |
+            sed -n 's/.*element_count[[:space:]]*:[[:space:]]*\([0-9][0-9 ]*\).*/\1/p' |
+            head -n1 | tr -d ' ')"
+        [ -n "$BANIP_ELEMENTS" ] || BANIP_ELEMENTS=0
+        printf '%s\n' "$BANIP_STATUS" | grep -q 'bcp38:[[:space:]]*✔' && BANIP_BCP38=1
+    fi
+    emit_value openwrt_banip_up gauge "Whether banIP reports active state." "$BANIP_UP"
+    emit_value openwrt_banip_elements gauge "Current banIP nftables element count." "$BANIP_ELEMENTS"
+    emit_value openwrt_banip_bcp38_enabled gauge "Whether banIP reports BCP38 protection enabled." "$BANIP_BCP38"
+
+    mv "$TMP_FILE" "$OUT_FILE"
+}
+
+case "${1:-}" in
+    --loop)
+        while :; do
+            collect_once
+            sleep "$INTERVAL"
+        done
+        ;;
+    *)
+        collect_once
+        ;;
+esac
