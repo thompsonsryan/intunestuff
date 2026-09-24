@@ -5,6 +5,7 @@ TMP_FILE="${OUT_FILE}.$$"
 DNSCRYPT_METRICS_URL="http://127.0.0.1:8082/metrics"
 DNSCRYPT_CONFIG="/etc/dnscrypt-proxy2/dnscrypt-proxy-219-direct.toml"
 INTERVAL="${ROUTER_EXTRA_INTERVAL:-15}"
+CAKE_IFACE="${ROUTER_EXTRA_CAKE_IFACE:-eth1}"
 
 mkdir -p "$OUT_DIR"
 
@@ -66,6 +67,173 @@ collect_once() {
         done
     fi
     emit_value openwrt_qosify_up gauge "Whether QoSify statistics were collected successfully." "$QOSIFY_UP"
+
+    # CAKE qdisc statistics for the WAN egress interface.
+    # The parser targets the standard `tc -s qdisc show dev <iface>` diffserv4 output
+    # and stops before any subsequent clsact/fq_codel qdisc.
+    printf '# HELP openwrt_cake_up Whether a CAKE qdisc was detected on the interface.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_up gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_bandwidth_bps Configured CAKE shaping bandwidth in bits per second.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_bandwidth_bps gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_capacity_estimate_bps CAKE capacity estimate in bits per second.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_capacity_estimate_bps gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_bytes_total Bytes sent through CAKE.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_bytes_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_packets_total Packets sent through CAKE.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_packets_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_drops_total Packets dropped by CAKE.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_drops_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_overlimits_total CAKE overlimit events; shaping activity, not packet loss.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_overlimits_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_requeues_total CAKE packet requeues.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_requeues_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_backlog_bytes Current CAKE backlog in bytes.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_backlog_bytes gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_backlog_packets Current CAKE backlog in packets.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_backlog_packets gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_memory_used_bytes Approximate CAKE memory usage in bytes parsed from tc units.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_memory_used_bytes gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_memory_limit_bytes CAKE memory limit in bytes parsed from tc units.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_memory_limit_bytes gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_active_queues Current number of active CAKE queues.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_active_queues gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_threshold_bps CAKE diffserv tin threshold in bits per second.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_threshold_bps gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_target_seconds CAKE tin target delay in seconds.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_target_seconds gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_interval_seconds CAKE tin interval in seconds.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_interval_seconds gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_peak_delay_seconds Current CAKE tin peak delay in seconds.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_peak_delay_seconds gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_average_delay_seconds Current CAKE tin average delay in seconds.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_average_delay_seconds gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_sparse_delay_seconds Current CAKE tin sparse-flow delay in seconds.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_sparse_delay_seconds gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_backlog_bytes Current CAKE tin backlog in bytes.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_backlog_bytes gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_packets_total Packets handled by CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_packets_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_bytes_total Bytes handled by CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_bytes_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_drops_total Packets dropped by CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_drops_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_ecn_marks_total ECN marks by CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_ecn_marks_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_ack_drops_total ACK-filter drops by CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_ack_drops_total counter\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_sparse_flows Current sparse flows in CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_sparse_flows gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_bulk_flows Current bulk flows in CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_bulk_flows gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_unresponsive_flows Current unresponsive flows in CAKE diffserv tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_unresponsive_flows gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_max_len_bytes Maximum observed packet/GSO length by CAKE tin.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_max_len_bytes gauge\n' >> "$TMP_FILE"
+    printf '# HELP openwrt_cake_tin_quantum_bytes CAKE tin DRR quantum in bytes.\n' >> "$TMP_FILE"
+    printf '# TYPE openwrt_cake_tin_quantum_bytes gauge\n' >> "$TMP_FILE"
+
+    if command -v tc >/dev/null 2>&1; then
+        tc -s qdisc show dev "$CAKE_IFACE" 2>/dev/null | awk -v iface="$CAKE_IFACE" '
+            function clean_num(v){ gsub(/[^0-9.]/,"",v); return v+0 }
+            function rate(v){
+                if(v ~ /Gbit$/){sub(/Gbit$/,"",v);return (v+0)*1000000000}
+                if(v ~ /Mbit$/){sub(/Mbit$/,"",v);return (v+0)*1000000}
+                if(v ~ /Kbit$/){sub(/Kbit$/,"",v);return (v+0)*1000}
+                if(v ~ /bit$/){sub(/bit$/,"",v);return v+0}
+                return v+0
+            }
+            function secs(v){
+                if(v ~ /us$/){sub(/us$/,"",v);return (v+0)/1000000}
+                if(v ~ /ms$/){sub(/ms$/,"",v);return (v+0)/1000}
+                if(v ~ /s$/){sub(/s$/,"",v);return v+0}
+                return v+0
+            }
+            function bytesval(v){
+                if(v ~ /Kb$/){sub(/Kb$/,"",v);return (v+0)*1000}
+                if(v ~ /Mb$/){sub(/Mb$/,"",v);return (v+0)*1000000}
+                if(v ~ /Gb$/){sub(/Gb$/,"",v);return (v+0)*1000000000}
+                if(v ~ /b$/){sub(/b$/,"",v);return v+0}
+                return v+0
+            }
+            function emit4(name,conv, i,val){
+                for(i=1;i<=4;i++){
+                    val=$(i+1)
+                    if(conv=="rate") val=rate(val)
+                    else if(conv=="secs") val=secs(val)
+                    else if(conv=="bytes") val=bytesval(val)
+                    else val=clean_num(val)
+                    printf "%s{interface=\"%s\",tin=\"%s\"} %.12g\n",name,iface,tin[i],val
+                }
+            }
+            BEGIN{
+                tin[1]="bulk"; tin[2]="besteffort"; tin[3]="video"; tin[4]="voice"
+            }
+            $1=="qdisc" {
+                if($2=="cake"){
+                    cake=1; seen=1
+                    for(i=1;i<=NF;i++)
+                        if($i=="bandwidth" && i<NF)
+                            printf "openwrt_cake_bandwidth_bps{interface=\"%s\"} %.12g\n",iface,rate($(i+1))
+                    next
+                } else if(cake) {
+                    exit
+                }
+            }
+            !cake { next }
+            $1=="Sent" {
+                d=$7; o=$9; r=$11
+                gsub(/[^0-9]/,"",d); gsub(/[^0-9]/,"",o); gsub(/[^0-9]/,"",r)
+                printf "openwrt_cake_bytes_total{interface=\"%s\"} %s\n",iface,$2
+                printf "openwrt_cake_packets_total{interface=\"%s\"} %s\n",iface,$4
+                printf "openwrt_cake_drops_total{interface=\"%s\"} %s\n",iface,d
+                printf "openwrt_cake_overlimits_total{interface=\"%s\"} %s\n",iface,o
+                printf "openwrt_cake_requeues_total{interface=\"%s\"} %s\n",iface,r
+                next
+            }
+            $1=="backlog" && $4=="requeues" {
+                p=$3; gsub(/p$/,"",p)
+                printf "openwrt_cake_backlog_bytes{interface=\"%s\"} %.12g\n",iface,bytesval($2)
+                printf "openwrt_cake_backlog_packets{interface=\"%s\"} %s\n",iface,p
+                next
+            }
+            $1=="memory" && $2=="used:" {
+                printf "openwrt_cake_memory_used_bytes{interface=\"%s\"} %.12g\n",iface,bytesval($3)
+                printf "openwrt_cake_memory_limit_bytes{interface=\"%s\"} %.12g\n",iface,bytesval($5)
+                next
+            }
+            $1=="capacity" && $2=="estimate:" {
+                printf "openwrt_cake_capacity_estimate_bps{interface=\"%s\"} %.12g\n",iface,rate($3)
+                next
+            }
+            $1=="active" && $2=="queues:" {
+                printf "openwrt_cake_active_queues{interface=\"%s\"} %s\n",iface,$3
+                next
+            }
+            $1=="thresh"   { emit4("openwrt_cake_tin_threshold_bps","rate"); next }
+            $1=="target"   { emit4("openwrt_cake_tin_target_seconds","secs"); next }
+            $1=="interval" { emit4("openwrt_cake_tin_interval_seconds","secs"); next }
+            $1=="pk_delay" { emit4("openwrt_cake_tin_peak_delay_seconds","secs"); next }
+            $1=="av_delay" { emit4("openwrt_cake_tin_average_delay_seconds","secs"); next }
+            $1=="sp_delay" { emit4("openwrt_cake_tin_sparse_delay_seconds","secs"); next }
+            $1=="backlog"  { emit4("openwrt_cake_tin_backlog_bytes","bytes"); next }
+            $1=="pkts"     { emit4("openwrt_cake_tin_packets_total","num"); next }
+            $1=="bytes"    { emit4("openwrt_cake_tin_bytes_total","num"); next }
+            $1=="drops"    { emit4("openwrt_cake_tin_drops_total","num"); next }
+            $1=="marks"    { emit4("openwrt_cake_tin_ecn_marks_total","num"); next }
+            $1=="ack_drop" { emit4("openwrt_cake_tin_ack_drops_total","num"); next }
+            $1=="sp_flows" { emit4("openwrt_cake_tin_sparse_flows","num"); next }
+            $1=="bk_flows" { emit4("openwrt_cake_tin_bulk_flows","num"); next }
+            $1=="un_flows" { emit4("openwrt_cake_tin_unresponsive_flows","num"); next }
+            $1=="max_len"  { emit4("openwrt_cake_tin_max_len_bytes","num"); next }
+            $1=="quantum"  { emit4("openwrt_cake_tin_quantum_bytes","num"); next }
+            END{
+                if(seen) printf "openwrt_cake_up{interface=\"%s\"} 1\n",iface
+                else printf "openwrt_cake_up{interface=\"%s\"} 0\n",iface
+            }
+        ' >> "$TMP_FILE"
+    else
+        printf 'openwrt_cake_up{interface="%s"} 0\n' "$CAKE_IFACE" >> "$TMP_FILE"
+    fi
 
     DNSCRYPT_UP=0
     if DNSCRYPT_METRICS="$(wget -T 3 -qO- "$DNSCRYPT_METRICS_URL" 2>/dev/null)" && [ -n "$DNSCRYPT_METRICS" ]; then
